@@ -14,16 +14,12 @@ library(lme4)
 library(kyotil)   # keepWarnings
 library(parallel) # base R parallel
 library(tidyverse)
+library(here)
+library(stringr)
 ```
 
 
 ```{r}
-library(lme4)
-library(kyotil)
-library(parallel)
-library(here)
-library(stringr)
-
 set.seed(1)
 
 #-------------------------------------------------------
@@ -67,16 +63,17 @@ perf.grid <- expand.grid(
 #-------------------------------------------------------
 # Other parameters
 #-------------------------------------------------------
+logit <- function(p) log(p / (1 - p))
+
 age.range <- 10:168
-r.effects <- 0.25
-r.slope.condition <- 0.45
+r.effects <- abs(logit(tb_levels)-logit(fb_levels))*2
+r.slope.condition <- (abs(logit(tb_levels)-logit(fb_levels)))
 r.slope.trial <- 0.1
 n.simus <- 1000   # set back to 1000 in real analysis
 all.res.all.samples <- data.frame()
 
 contr <- glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000))
 
-logit <- function(p) log(p / (1 - p))
 
 # Extract p from drop1 
 get_p <- function(tab, term) {
@@ -271,9 +268,14 @@ Notes on changes
 
 
 ##Evaluation
+
+```{r}
+load(file = here("power_analysis", "power_sim_snuffle_mat_workspace_parallel_rslope_162.RData"))
+```
+
 ```{r}
 all.res <- data.frame(
-  lapply(all.res2, function(col) {
+  lapply(all.res.all.samples, function(col) {
     if (is.list(col) && all(sapply(col, length) <= 1)) {
       suppressWarnings(as.numeric(unlist(col)))
     } else {
@@ -346,15 +348,15 @@ Notes on efficiency
 library(ggplot2)
 
 plot.sample.sizes.power.snuffle.mat <- ggplot(lrt.data2,
-                                              aes(x = n.subject, y = proportion.sign.lrt.condition * 100)) +
+                                              aes(x = factor(N), y = proportion.sign.lrt.condition * 100)) +
   geom_col() +
   ylab("Power (% significant LRT for condition)") +
-  xlab("Total sample size") + scale_x_continuous(breaks = sort(unique(lrt.data2$n.subject))) + geom_hline(
+  xlab("Total sample size") + scale_x_discrete() + geom_hline(
     yintercept = 80,
     col = "blue",
     lty = 2,
     lwd = 0.9
-  ) + theme_classic()
+  ) + theme_classic() + facet_wrap(~ig_per)
 
 ggsave(plot.sample.sizes.power.snuffle.mat, filename = "./plots/sample_sizes_power_analysis_snuffle_mat.png", scale = 0.55, height = 6, width = 15)
 ```
